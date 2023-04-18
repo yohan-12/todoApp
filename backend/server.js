@@ -13,6 +13,6 @@ app.use(express.urlencoded({extended: false}))
 app.use('/api/goals', require('./routes/goalRoutes'))
 
 
-app.listen(port, () => console.log(`Server started on port ${port}`))
+app.listen(port, () => console.log(`Server started on port ${port}`.magenta.bold))
 
 
