@@ -1,0 +1,218 @@
+App.JSX
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Notes from "./pages/Notes";
+import CreateNote from "./pages/CreateNote";
+import EditNotes from "./pages/EditNotes";
+import "./index.css";
+import { useEffect, useState } from "react";
+
+function App() {
+  const [notes, setNotes] = useState(() => {
+    const localValue = localStorage.getItem("item");
+    if (localValue === 'undefined') {
+      return [];
+    } else {
+
+      return JSON.parse(localValue);
+    }
+  });
+  useEffect(() => {
+    localStorage.setItem("item", JSON.stringify(notes));
+  }, [notes]);
+  return (
+    <main id="app">
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Notes notes={notes} />} />
+          <Route
+            path="/create-note"
+            element={<CreateNote setNotes={setNotes} />}
+          />
+          <Route path="/edit-note/:id" element={<EditNotes notes={notes} setNotes={setNotes} />} />
+        </Routes>
+      </BrowserRouter>
+    </main>
+  );
+}
+export default App;
+==========================================================================
+
+
+Notes.JSX
+import React, { useEffect, useState } from "react";
+import { CiSearch } from "react-icons/ci";
+import { MdClose } from "react-icons/md";
+import { Link } from "react-router-dom";
+import { BsPlusLg } from "react-icons/bs";
+import NoteItem from "../components/NoteItem";
+
+const Notes = ({ notes }) => {
+  const [showSearch, setShowSearch] = useState(false);
+  const [text, setText] = useState("");
+  const [filteredNotes, setFilteredNotes] = useState(notes);
+  const handleSearch = () => {
+    setFilteredNotes(
+      notes.filter((item) => {
+        if (item.title.toLowerCase().match(text.toLocaleLowerCase())) {
+          return item;
+        }
+      })
+    );
+  };
+  useEffect(handleSearch, [text]);
+  return (
+    <section>
+      <header className="notes__header">
+        {!showSearch && <h2>My Notes</h2>}
+        {showSearch && (
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              handleSearch();
+            }}
+            autoFocus
+          />
+        )}
+        <button onClick={() => setShowSearch((prev) => !prev)} className="btn">
+          {showSearch ? <MdClose /> : <CiSearch />}
+        </button>
+      </header>
+      <div className="notes__container">
+        {filteredNotes.length == 0 && <p className="empty__notes">No Notes Found</p>}
+        {filteredNotes.map((note) => (
+          <NoteItem key={note.id} note={note} />
+        ))}
+      </div>
+      <Link to="create-note" className="btn add__btn">
+        <BsPlusLg />
+      </Link>
+    </section>
+  );
+};
+export default Notes;
+=========================================================================
+
+EditNotes.jsx
+/* eslint-disable react/prop-types */
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { IoIosArrowBack } from "react-icons/io";
+import { RiDeleteBin6Line } from "react-icons/ri";
+import { useState } from "react";
+import useCreateDate from "../components/useCreateDate";
+
+const EditNotes = ({ notes, setNotes }) => {
+  const { id } = useParams();
+  const note = notes.find((item) => item.id === id);
+  const [title, setTitle] = useState(note.title);
+  const [details, setDetails] = useState(note.details);
+  const date = useCreateDate()
+  const navigate = useNavigate()
+
+  const handleForm = (e) => {
+    e.preventDefault();
+    if(title && details){
+      const newNote = {...note, title, details, date}
+      setNotes(prev => {
+        return prev.map(item => {
+          if(item.id === id){
+            return newNote
+          }
+          else return item
+        })
+      })
+      // const newNotes = notes.map(item => {
+      //   if(item.id === id){
+      //     item = newNote;
+      //   }
+      //   return item;
+      // })
+      // setNotes(newNotes);
+    }
+    navigate('/')
+  }
+  const handleDelete = () => {
+    if(window.confirm('Are you sure you wanna delete?')){
+      const newNotes = notes.filter(item => item.id !== id);
+      setNotes(newNotes)
+      navigate('/')
+    }
+  }
+
+  return (
+    <section>
+      <header className="create-note__header">
+        <Link to="/" className="btn">
+          <IoIosArrowBack />
+        </Link>
+        <button onClick={handleForm}  className="btn lg primary">Save</button>
+        <button onClick={handleDelete} className="btn danger">
+          <RiDeleteBin6Line />
+        </button>
+      </header>
+      <form onSubmit={handleForm}className="create-note__form">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Title"
+          autoFocus
+        />
+        <textarea
+          rows="28"
+          value={details}
+          onChange={(e) => setDetails(e.target.value)}
+          placeholder="Note details..."
+        ></textarea>
+      </form>
+    </section>
+  );
+};
+export default EditNotes;
+=========================================================================
+
+CreateNotes.jsx
+import { Link, useNavigate } from "react-router-dom"
+import {IoIosArrowBack} from 'react-icons/io'
+import { useState } from "react"
+import useCreateDate from "../components/useCreateDate"
+
+const CreateNote = ({setNotes}) => {
+    const [title, setTitle] = useState('')
+    const [details, setDetails] = useState('')
+    const date = useCreateDate()
+    const navigate = useNavigate()
+    const handleSubmit = (e) => {
+        e.preventDefault()
+        if(title && details){
+            const note = {
+                id: crypto.randomUUID(),
+                title, 
+                details,
+                date
+            }
+            setNotes(prev =>  {
+                console.log(prev);
+                return [note, ...prev] } )
+            //Redirect to homepage
+            navigate('/')
+        }
+    }
+
+  return (
+   <section>
+    <header className="create-note__header">
+        <Link to="/" className="btn"><IoIosArrowBack/></Link>
+        <button onClick={handleSubmit} className="btn lg primary">Save</button>
+    </header>
+    <form className="create-note__form" onSubmit={handleSubmit}> 
+        <input type="text" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} autoFocus/>
+        <textarea rows="28" value={details} onChange={e => setDetails(e.target.value)}  placeholder="Note details..."></textarea>
+    </form>
+   </section>
+  )
+}
+
+export default CreateNote
+
