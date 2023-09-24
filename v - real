@@ -1,125 +1,149 @@
-Vision to Reality
-Stop Working, Start Living
+https://github.com/snehasishdey333/youtube-2023/tree/blog-app-mern
 
-Curtis L. Jenkins
+index.js
+const express = require('express')
+const colors = require('colors')
+const dotenv = require('dotenv')
+const connectDB = require('./config/db')
+const authRoute = require('./routes/auth')
 
-THE SUMMARY IN BRIEF
+dotenv.config({path: './config/config.env'})
+connectDB();
+const app = express()
+app.use(express.json())
+app.use('/api/auth', authRoute)
 
-Many entrepreneurs believe that to grow their businesses, they must work harder and harder. They overlook the importance of the team, the financials, and a solid plan that must be executed and adjusted on a daily, weekly, and monthly basis. They don’t understand the concept of working “on the business” because they are too often working – harder and harder – “in the business,” creating another job for themselves instead of rising to leadership and orchestrating a well-run business.
+const PORT = process.env.PORT || 5000;
 
-Project management executive, Curtis L. Jenkins, drew upon his 20-plus years of experience to write Vision to Reality: Stop Working, Start Living to help entrepreneurs realize their vision for their business and “clear the fog” for everyone involved to get on board with executing the vision. This book provides a simple set of steps to help entrepreneurs gain the confidence they need to tackle problems head-on despite the problems appearing insurmountable. It is unique and appealing because it introduces a new opportunity, using simple but effective foundational principles and tools often overlooked by entrepreneurs in their quest for business success.
+app.listen(PORT, console.log(`Server running on port ${PORT}`.yellow.bold))
+-------------------------------------------------------------------------
+routes folder -> auth.js
+const express = require('express')
+const router = express.Router()
+const { registerUser, loginUser, logoutUser } = require('../controllers/users')
 
-IN THIS SUMMARY, YOU WILL LEARN:
+router.route("/register").post(registerUser);
+router.route("/login").post(loginUser)
+router.route("/logout").get(logoutUser)
+module.exports = router; 
+-------------------------------------------------------------------------
+models folder -> User.js
+const mongoose = require("mongoose");
+const { Schema, model } = mongoose;
+const UserSchema = new Schema(
+  {
+    username: {
+      type: String,
+      trim: true,
+      required: [true, "Something wrong with registering username"],
+      unique: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+      required: [true, "Something wrong with registering email"],
+      unique: true,
+    },
+    password: {
+      type: String,
+      trim: true,
+      required: [true, "Something wrong with registering password"],
+    },
+  },
+  { timestamps: true }
+);
 
-How to realize the vision for your business.
-How to gain the confidence you need to tackle problems head-on.
-Simple but effective foundational principles and tools often overlooked by entrepreneurs.
-To understand the concept of working “on the business” versus “in the business”.
-How to rise to leadership and orchestrate a well-run business.
-Part 1: What Leads Smart Entrepreneurs And CEOs Astray?
+module.exports = model("User", UserSchema);
+-------------------------------------------------------------------------
+controllers folder -> users.js
+const User = require('../models/User')
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 
-MISGUIDED PROBLEMS
+//! Register User, POST, /api/auth/register
+exports.registerUser = async (req, res) => {
+    try {
+        const {username, email, password} = req.body;
+        const salt = await bcrypt.genSalt(10)
+        const hashedPassword = await bcrypt.hashSync(password, salt)
+        const newUser = new User({username, email, password: hashedPassword})
+        await newUser.save()
+        return res.status(201).json({
+            success: true,
+            data: newUser
+        })
+    } catch (error) {
+        if(error.name === "ValidationError"){
+         const messages = Object.values(error.errors).map(val => val.message)
+            return res.status(400).json({
+                sucess: false,
+                errorMsg: messages
+            })
+        }else{
+            return res.status(500).json({
+                success:false,
+                errorMsg: "Server Error"
+            })
+        }
+    }
+}
+exports.loginUser = async (req, res) => {
+    try {
+        const checkUser = await User.findOne({email: req.body.email})
+        if (!checkUser) {
+          return res.status(401).json({
+            success: false,
+            ErrorMsg: "Cannot find User",
+          });
+        }
+        const match = await bcrypt.compare(
+          req.body.password,
+          checkUser.password
+        );
+        if(!match){
+            return res.status(401).json({
+                success: false,
+                ErrorMsg: "Incorrect Password"
+            })
+        }
+        const token = jwt.sign({id:checkUser._id}, process.env.SECRET, {expiresIn: "1d"})
 
-Why do the same challenges continue to manifest in your business? In many cases, the problem is misdiagnosis or misalignment, which can occur when you attempt to simply resolve the symptoms rather than find the core problem and its solution. The issues that are often misdiagnosed can also be the result of misalignments in the company. Generally, business problems that continually resurface are misdiagnosed issues coming from an undiscovered, underlying problem.
-
-INABILITY TO GET OUT OF THEIR OWN WAY
-
-There is no doubt that entrepreneurs are faced with numerous challenges, but more problems arise when you genuinely believe only you can solve the challenges and overcome the obstacles. The RFE is designed to help entrepreneurs use time to their advantage, resulting in better preparation, enhanced understanding, diagnosing problems effectively, better communication, and enhanced planning, giving entrepreneurs the tools they need to get out of their own way.
-
-WILLINGNESS TO MAKE EXCUSES
-
-Entrepreneurs, business managers, and CEOs who make excuses for mediocrity in their businesses or for not hitting their goals have gone astray on the path to success. Excuses are often the results of a lack of plan, poor execution of the plan, and/or a lack of accountability and time management. Clearly defining your plan and vision, training your employees well, and setting boundaries on your time can help you achieve success and bypass the excuses.
-
-WORKING HARDER
-
-As an entrepreneur, business owner, or CEO, it is easy to see problems and simply resort to fighting fires instead of fire prevention. Often the obstacles and setbacks you are hoping to overcome through hard work are really trying to force you to look for and develop a new strategy. When used every day, the RFE can help you execute your business strategy successfully, adjusting as needed, without working yourself to death.
-
-RANDOM GOALS
-
-When stating actual goals, there is a process of risk assessment and mitigation. It is a crucial process to ensure we clearly understand all the factors keeping us from meeting those goals and what actions are required to clear the way. We then work together on a set of actions to help us meet those goals, identifying what needs to be done on a daily, weekly, monthly, and quarterly basis.
-
-OVERESTIMATING BANDWIDTH
-
-In business, bandwidth is your capacity to accomplish work. Entrepreneurs and CEOs are often guilty of overestimating their time, their bandwidth, and their ability to execute. One tool that is helpful for staying in the leadership role is the Eisenhower matrix, which helps entrepreneurs with prioritization of urgent, important tasks that take up their time. Stop overestimating your time and commit to one, maybe two, tasks to accomplish in a day. Get rid of the things that don’t add value.
-
-UNDERESTIMATING CAPABILITY
-
-In business, leveraging strategies include financial stability as well as enhanced business success. Business leaders often go astray when they underestimate their capabilities. And entrepreneurs often underestimate their own capabilities: what they’re capable of with the right leverage. Leverage allows individuals to use debt to their advantage. One of my goals is to help people understand how to leverage debt to grow.
-
-LACK OF CONTEXT
-
-In any company, context gives businesses the ability to communicate effectively with customers. Every message requires good content and content delivery. In either instance, lack of context often results in mixed messages, which is never good for business. When you start on the path to improve communication in your business, you must begin with listening skills as the first area to develop. Create a communication mechanism for your teams by bringing just these two items to the table: your vision and your values.
-
-COGNITIVE DISSONANCE
-
-Entrepreneurs’ cognitive dissonance rears its ugly head quite often in their hiring practices. Another way cognitive dissonance manifests in the workplace is in the concept of change management. Change management says a leader can bring the solution to people, but sometimes a leader has to bring the people to the solution. When it comes to cognitive dissonance, status quo bias and/or confirmation bias often come into play. To attack cognitive dissonance and alter the behaviors resistant to change, first recognize that you have some form of cognitive dissonance.
-
-FEAR OF LOSING CONTROL
-
-Entrepreneurs often find themselves on the road to failure because they fear losing control of the business they are building. Fear of losing control can be avoided or overcome through small steps of giving bits and pieces of control when it comes to the less risky items like cash collection. Therein is the foundation of the RFE: to help entrepreneurs grow in the leader space by understanding the two key components of business—employees and cash flow—and putting the plans and accountability in place to realize their visions!
-
-Part 2: The Remedies
-
-ORGANIZE FOR SUCCESS
-
-The process of organizing for success begins with stating your goals and articulating the vision for the company. The vision must be stated in a manner that is understandable for everyone. The second part of organizing for success is organizing financials. True Visionaries can see themselves in the future, accomplishing goals with the organization. They can then leverage the RFE and walk through the milestones.
-
-DEVELOP A PLAN OF ASSESSMENT
-
-There are tools and techniques that can be used to help with long-term planning and unforeseen changes, as well as to analyze where you currently are. For the long-term, using scenario planning is my preferred method for determining the impact and predictability of an uncertain future. My guide for a plan of assessment is to perform a risk assessment with a STEEP model. There should also be a section for goals not yet met, current challenges, and any setbacks that have occurred since the last assessment. Finally, it should contain ideas for how to address the setbacks in positive, growth-oriented ways.
-
-ORGANIZE THE TEAM
-
-As part of the process, entrepreneurs must develop strong relationships with their team members and organize their team to handle any additional work that comes from growth. It is also wise to have a pool of potential talent to draw from when the need arises. You need to think about all the relationships you have through the lens of figuring out what is in it for them and how you can help them.
-
-CHANGE MANAGEMENT AND COMMUNICATION
-
-A CRM (Customer Relationship Management) tool is a great starting point from which entrepreneurs can strategically plan touchpoints in the form of calls, emails, and even mailers. Creating a vision of sales opportunities in this way also creates excitement among your employees as they see each opportunity by its value. Communication and listening are also key with your employees, especially when introducing change.
-
-MENTAL PREPARATION FOR IMPLEMENTATION
-
-If you can’t decide the best path for moving forward in mental preparedness for implementation, you should work with someone—be it a mentor, consultant, or another guide—who you trust to help you with this issue. Mental preparation for implementation starts with understanding what Tim Ferris so eloquently explained: if you want to have a great quality of life, you need to put together a great team—be it physical or virtual.
-
-THE REALIZATION FRAMEWORK EXPERIENCE (RFE)
-
-The RFE requires a full-on behavior shift that focuses entrepreneurs’ attention on themselves and key people to gain the growth and achievement they desire. Through the RFE methodology, entrepreneurs take the necessary steps forward to accomplish their vision successfully. First, visualize, then evaluate. Then calculate and forecast what’s needed and how much is needed to get to the future. Clarify this future with a solid plan and then realize the future with daily, weekly, and monthly actions.
-
-Part 3: How To Prevent Backsliding
-
-DO IT ANYWAY!
-
-If the methodology doesn’t feel right because it’s new, do it anyway! When you perform the exercises of the RFE—daily, weekly, monthly, and quarterly—you learn new habits, change from old ways of working, and develop planning methods to avoid cognitive dissonance behaviors like confirmation bias and status quo bias.
-
-RECOGNIZE GROWTH
-
-Use your measures as a guide. At a minimum, there are four major groups of measurement every business should have at their disposal. These measurements follow the RFE and include evaluating your people and calculating your cash flow. The measures provide an accurate picture of what is going on in your business and will help you recognize growth as it happens.
-
-THE FIRST MILLION IS THE HARDEST
-
-Why? Because the systems and team members they put in place have allowed them to grow and make money. And they also learned as they worked through those systems.Your first step is to review your vision and articulate it clearly for yourself. Once you can clarify your vision, you can begin to work on articulating this vision to everyone involved.
-
-VISION TO ROADMAP
-
-It is imperative that entrepreneurs map out a clear vision of what they want their reality to be. As the leader, you must run meetings and guide your team on a daily basis. To communicate and guide your team to success, you must develop a strong rapport with your team. This translates into serving customers and clients successfully.
-
-ELEMENTS
-
-Each entrepreneur must design a daily, weekly, monthly, and quarterly planning sheet with elements that fit their business model. The elements on the planning sheet should be communicated well and should be clear to both you and your employees. Planning must include deliberate daily meetings with staff, sales and operations planning, meetings with the board of directors, and meetings with key divisions of your team (sales team, operations team, etc.)
-
-DEVELOPING MUSCLE
-
-You must retrain your mind. You must spend time with your team and your customers. You must focus on the people—customers and employees—spending your time, money, and energy on them. Trust in the development process as you fail up. Every failure is an opportunity to learn. There are three major elements that I use to ensure I build muscle and prevent backsliding: Habits (Systems), Measurements (Key Performance Indicators), and Accountability (Advisors and Mentors).
-
-FINANCIAL PERSPECTIVE
-
-The best entrepreneurs understand business from a financial perspective: cash flow, COGS (costs of goods sold), gross margins, and more. Knowing your numbers and your value, you can feel confident you are asking for what you deserve and are willing to leave some business on the table instead of compromising your principles.
-
-STRENGTHEN THE VISION
-
-For entrepreneurs, knowledge and communication are necessary to remove obstacles along the way, strengthen their vision, and carry on until the vision becomes a reality. The Realization Framework Experience is not a one-and-done activity. It is a series of activities and engagements between the leadership, the advisors, and the employees, as well as the customers and the suppliers of the company.
-
-Conclusion
-
-Vision to Reality was written for business leaders and entrepreneurs who know their “Why?” but still need to understand the “how” to guide and grow their business successfully. The message of the book is simple, yet profound: clear the fog, develop the vision, and learn the skills to succeed in your business and industry. The RFE is designed to take you there. The goal is to bring your vision to reality, whether your business is large or small.
-
-Vision to Reality: Stop Working, Start Living by Curtis L Jenkins ©2022 by Curtis L Jenkins. Summarized by permission of the publisher, Morgan James Publishing. ISBN 978-1631957574. Published by Soundview Executive Book Summaries® Copyright ©2022 by Soundview, Inc. All rights reserved. Reproduction in whole or in part is prohibited. 45SS02A
+        //* the ...info grabs everything except password from checkUser._doc
+        const {password, ...info}=checkUser._doc
+         return res.cookie("token", token).status(200).json({
+           success: true,
+           data: info
+         });
+    } catch (error) {
+        return res.status(500).json({
+            sucess: false,
+            ErrorMsg: "Server Error"
+        })
+    }
+}
+exports.logoutUser = async(req,res) => {
+    try {
+        return res.clearCookie("token", {sameSite:"none", secure:true}).status(201).json({
+            success: true,
+            Msg: "Successfully cleared token"
+        })
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            ErrorMsg: "Something wrong with server"
+        })
+    }
+}
+-------------------------------------------------------------------------
+config -> db.js
+const mongoose = require('mongoose')
+const connectDB = async() => {
+    try {
+        const conn = await mongoose.connect(process.env.MONGO_URI)
+        console.log(`MongoDB Connected: ${conn.connection.host}`.cyan.underline.bold);
+    } catch (error) {
+        console.log(`Error ${error.message}`.red);
+        process.exit(1)
+    }
+}
+module.exports = connectDB;
